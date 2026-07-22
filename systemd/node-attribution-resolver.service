@@ -1,0 +1,41 @@
+# Node Attribution Resolver — oneshot service.
+#
+# Runs resolve_client_nodes.py ONCE per activation: queries EC2 describe APIs
+# and atomically writes the Client_IP -> {name_tag, instance_id} cache that the
+# collector reads.
+#
+# Triggered every 5m by node-attribution-resolver.timer.
+#
+# This component is OPTIONAL — only needed for AWS EC2 name resolution.
+#
+# Required IAM permissions:
+#   ec2:DescribeInstances
+#   ec2:DescribeNetworkInterfaces
+
+[Unit]
+Description=Node Attribution Resolver: refresh Client_IP -> EC2 node cache
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+
+# Single source of configurable values. Leading "-" = missing file is non-fatal.
+EnvironmentFile=-/opt/mongodb-connection-monitor/config/node_attribution.env
+
+# Adjust this path to match your install location.
+ExecStart=/usr/bin/python3 /opt/mongodb-connection-monitor/resolver/resolve_client_nodes.py
+
+# Run as an unprivileged user.
+User=node_exporter
+Group=node_exporter
+
+# Light hardening (does NOT block IMDS / EC2 API egress).
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/usr/local/percona/pmm/collectors/textfile-collector
+
+[Install]
+WantedBy=multi-user.target

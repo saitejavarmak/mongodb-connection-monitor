@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment files with secrets (templates are tracked)
+*.env.local
+.env
+
+# Node attribution cache (runtime artifact)
+.client_node_cache.tsv
+
+# Prometheus textfile output (runtime artifact)
+*.prom
+
+# Byte-compiled
+*.pyc
+
+# Testing
+.pytest_cache/
+.hypothesis/
+htmlcov/
+.coverage
+coverage.xml
+
+# Logs
+*.log

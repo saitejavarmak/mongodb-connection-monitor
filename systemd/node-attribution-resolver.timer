@@ -1,0 +1,26 @@
+# Node Attribution Resolver — interval timer.
+#
+# Triggers node-attribution-resolver.service every 5 minutes (the Attribution
+# Refresh Interval). This is deliberately slower than the collector's 60s cadence
+# to avoid EC2 API throttling.
+#
+# To change the cadence, edit OnUnitActiveSec and run:
+#   systemctl daemon-reload && systemctl restart node-attribution-resolver.timer
+
+[Unit]
+Description=Run the Node Attribution Resolver every 5 minutes
+
+[Timer]
+# Fire shortly after boot so the cache is warm before the first scrape.
+OnBootSec=1min
+# Attribution refresh interval. Keep in sync with ATTRIBUTION_REFRESH_INTERVAL
+# in config/node_attribution.env.
+OnUnitActiveSec=5min
+# Spread fire time to avoid fleet-wide lockstep on EC2 APIs.
+RandomizedDelaySec=30s
+# Catch up with a single run if the host was offline past a scheduled fire.
+Persistent=true
+Unit=node-attribution-resolver.service
+
+[Install]
+WantedBy=timers.target

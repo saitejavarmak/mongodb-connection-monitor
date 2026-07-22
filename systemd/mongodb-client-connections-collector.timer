@@ -1,0 +1,21 @@
+# MongoDB per-client connection collector — interval timer.
+#
+# Triggers mongodb-client-connections-collector.service every 60s so the
+# mongodb_client_connections.prom textfile is refreshed at <=60s resolution.
+
+[Unit]
+Description=Run the MongoDB per-client connection collector every 60s
+
+[Timer]
+# Fire shortly after boot so a fresh .prom exists before the first scrape.
+OnBootSec=30s
+# Collection cadence. Lower for tighter resolution; do NOT raise above 60s.
+OnUnitActiveSec=60s
+# Small randomized delay avoids fleet-wide lockstep.
+RandomizedDelaySec=5s
+# Skip missed runs rather than bursting catch-ups.
+Persistent=false
+Unit=mongodb-client-connections-collector.service
+
+[Install]
+WantedBy=timers.target

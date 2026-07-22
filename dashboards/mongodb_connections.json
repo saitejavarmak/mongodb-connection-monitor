@@ -1,0 +1,481 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "MongoDB connection utilization per instance with per-client top-sources table.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [],
+  "panels": [
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "title": "Overview — All Instances",
+      "type": "row"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Current connections per instance. One line per service_name.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisLabel": "connections", "drawStyle": "line",
+            "fillOpacity": 10, "lineWidth": 2,
+            "showPoints": "never", "spanNulls": false
+          },
+          "min": 0, "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 1 },
+      "id": 1,
+      "options": {
+        "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "editorMode": "code",
+          "expr": "mongodb_ss_connections{conn_type=\"current\", service_name=~\"$service_name\"}",
+          "legendFormat": "{{ service_name }}",
+          "range": true,
+          "refId": "CURRENT"
+        }
+      ],
+      "title": "Current Connections — All Instances",
+      "type": "timeseries"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Connection limit (current + available) per instance.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisLabel": "connections", "drawStyle": "line",
+            "fillOpacity": 10, "lineWidth": 2,
+            "showPoints": "never", "spanNulls": false
+          },
+          "min": 0, "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 1 },
+      "id": 2,
+      "options": {
+        "legend": { "calcs": ["lastNotNull"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "editorMode": "code",
+          "expr": "mongodb_ss_connections{conn_type=\"current\", service_name=~\"$service_name\"} + ignoring(conn_type) mongodb_ss_connections{conn_type=\"available\", service_name=~\"$service_name\"}",
+          "legendFormat": "{{ service_name }}",
+          "range": true,
+          "refId": "LIMIT"
+        }
+      ],
+      "title": "Connection Limit (current + available) — All Instances",
+      "type": "timeseries"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Utilization % over time. Dashed threshold lines at 75% (warning) and 85% (critical).",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisLabel": "utilization %", "drawStyle": "line",
+            "fillOpacity": 5, "lineWidth": 2,
+            "showPoints": "never", "spanNulls": false,
+            "thresholdsStyle": { "mode": "dashed" }
+          },
+          "max": 100, "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 75 },
+              { "color": "red", "value": 85 }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 9 },
+      "id": 3,
+      "options": {
+        "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "editorMode": "code",
+          "expr": "100 * mongodb_ss_connections{conn_type=\"current\", service_name=~\"$service_name\"} / ignoring(conn_type) clamp_min(mongodb_ss_connections{conn_type=\"current\", service_name=~\"$service_name\"} + ignoring(conn_type) mongodb_ss_connections{conn_type=\"available\", service_name=~\"$service_name\"}, 1)",
+          "legendFormat": "{{ service_name }}",
+          "range": true,
+          "refId": "UTIL"
+        }
+      ],
+      "title": "Connection Utilization % — All Instances",
+      "type": "timeseries"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Top 20 client IPs by connection count. Client Node is the EC2 Name tag resolved via the Node Attribution Resolver. When attribution is unavailable, Client Node falls back to the client IP.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "custom": { "align": "auto", "cellOptions": { "type": "auto" } },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Connections (max)" },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": { "mode": "gradient", "type": "gauge", "valueDisplayMode": "color" }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "green", "value": null },
+                    { "color": "orange", "value": 2500 },
+                    { "color": "red", "value": 5000 }
+                  ]
+                }
+              },
+              { "id": "custom.width", "value": 160 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Client Node (EC2 Name)" },
+            "properties": [{ "id": "custom.width", "value": 260 }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Instance ID" },
+            "properties": [{ "id": "custom.width", "value": 180 }]
+          }
+        ]
+      },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 18 },
+      "id": 4,
+      "options": {
+        "cellHeight": "sm",
+        "footer": { "show": false },
+        "showHeader": true,
+        "sortBy": [{ "desc": true, "displayName": "Connections" }]
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "editorMode": "code",
+          "expr": "topk(20, mongodb_client_connections{node_name=\"$node_name\"})",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "TOPSOURCES"
+        }
+      ],
+      "title": "Top Connection Sources (client_ip)",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "job": true,
+              "instance": true,
+              "node_name": true,
+              "server_name": true,
+              "agent_id": true,
+              "machine_id": true,
+              "node_id": true,
+              "node_type": true,
+              "agent_type": true
+            },
+            "includeByName": {},
+            "indexByName": {
+              "client_ip": 0,
+              "client_node": 1,
+              "client_instance_id": 2,
+              "Value": 3
+            },
+            "renameByName": {
+              "Value": "Connections",
+              "client_ip": "Client IP",
+              "client_node": "Client Node (EC2 Name)",
+              "client_instance_id": "Instance ID"
+            }
+          }
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "Client IP": { "aggregations": [], "operation": "groupby" },
+              "Client Node (EC2 Name)": { "aggregations": ["firstNotNull"], "operation": "aggregate" },
+              "Instance ID": { "aggregations": ["firstNotNull"], "operation": "aggregate" },
+              "Connections": { "aggregations": ["max"], "operation": "aggregate" }
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [{ "field": "Connections (max)", "desc": true }]
+          }
+        }
+      ],
+      "type": "table"
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 28 },
+      "id": 101,
+      "repeat": "service_name",
+      "repeatDirection": "h",
+      "title": "Instance: $service_name",
+      "type": "row"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Current connections vs derived limit. The gap is remaining headroom.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisLabel": "connections", "drawStyle": "line",
+            "fillOpacity": 10, "lineWidth": 2,
+            "showPoints": "never", "spanNulls": false
+          },
+          "min": 0, "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "limit" },
+            "properties": [
+              { "id": "custom.fillOpacity", "value": 0 },
+              { "id": "custom.lineStyle", "value": { "dash": [10, 10], "fill": "dash" } },
+              { "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }
+            ]
+          }
+        ]
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 29 },
+      "id": 6,
+      "options": {
+        "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "editorMode": "code",
+          "expr": "mongodb_ss_connections{conn_type=\"current\", service_name=~\"$service_name\"}",
+          "legendFormat": "current",
+          "range": true,
+          "refId": "CURRENT"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "editorMode": "code",
+          "expr": "mongodb_ss_connections{conn_type=\"current\", service_name=~\"$service_name\"} + ignoring(conn_type) mongodb_ss_connections{conn_type=\"available\", service_name=~\"$service_name\"}",
+          "legendFormat": "limit",
+          "range": true,
+          "refId": "LIMIT"
+        }
+      ],
+      "title": "Current vs Limit — $service_name",
+      "type": "timeseries"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Utilization gauge with 75/85 threshold bands.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "max": 100, "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 75 },
+              { "color": "red", "value": 85 }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 29 },
+      "id": 7,
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "editorMode": "code",
+          "expr": "100 * mongodb_ss_connections{conn_type=\"current\", service_name=~\"$service_name\"} / ignoring(conn_type) clamp_min(mongodb_ss_connections{conn_type=\"current\", service_name=~\"$service_name\"} + ignoring(conn_type) mongodb_ss_connections{conn_type=\"available\", service_name=~\"$service_name\"}, 1)",
+          "instant": true,
+          "legendFormat": "{{ service_name }}",
+          "range": false,
+          "refId": "UTIL"
+        }
+      ],
+      "title": "Utilization % — $service_name",
+      "type": "gauge"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Current connection count (latest value).",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 29 },
+      "id": 8,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "editorMode": "code",
+          "expr": "mongodb_ss_connections{conn_type=\"current\", service_name=~\"$service_name\"}",
+          "instant": true,
+          "legendFormat": "{{ service_name }}",
+          "range": false,
+          "refId": "CUR"
+        }
+      ],
+      "title": "Current Connections — $service_name",
+      "type": "stat"
+    }
+
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["mongodb", "connections", "pmm"],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "label": "Data source",
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {},
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "definition": "label_values(mongodb_ss_connections, service_name)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Instance",
+        "multi": false,
+        "name": "service_name",
+        "options": [],
+        "query": {
+          "query": "label_values(mongodb_ss_connections, service_name)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "definition": "label_values(mongodb_ss_connections{service_name=\"$service_name\"}, node_name)",
+        "hide": 2,
+        "includeAll": false,
+        "label": "",
+        "multi": false,
+        "name": "node_name",
+        "options": [],
+        "query": {
+          "query": "label_values(mongodb_ss_connections{service_name=\"$service_name\"}, node_name)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "title": "MongoDB Connection Utilization",
+  "uid": "mongodb-connection-utilization",
+  "version": 3,
+  "weekStart": ""
+}

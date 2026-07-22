@@ -1,0 +1,50 @@
+---
+# PMM Alert Rule Templates for MongoDB Connection Monitoring.
+#
+# Import these templates into PMM's Alerting UI (Settings > Alerting > Alert Rule Templates).
+# After import, create alert rules from the templates and adjust the threshold parameter
+# to match your environment.
+#
+# NOTE: Annotations intentionally do NOT use $value (which dumps the entire label blob
+# in PMM). Instead they reference $labels.* for readable alert messages.
+
+templates:
+  - name: mongodb_per_client_connection_guardrail
+    version: 1
+    summary: Per-client IP connection guardrail (fires when a single client exceeds threshold)
+    expr: |
+      mongodb_client_connections > [[ .threshold ]]
+    params:
+      - name: threshold
+        summary: Per-client connection limit
+        unit: ""
+        type: float
+        range: [0, 100000]
+        value: 3000
+    for: 1m
+    severity: critical
+    labels:
+      alert_type: per_client_connection_guardrail
+    annotations:
+      summary: "{{ $labels.client_node }} ({{ $labels.client_ip }}) exceeds [[ .threshold ]] connections to {{ $labels.node_name }}"
+      description: "Client node {{ $labels.client_node }} (IP {{ $labels.client_ip }}) is holding excessive connections to MongoDB server {{ $labels.node_name }}. Limit is [[ .threshold ]]."
+
+  - name: mongodb_total_connections_critical
+    version: 1
+    summary: Total connections per MongoDB instance (fires when instance total exceeds threshold)
+    expr: |
+      mongodb_ss_connections{conn_type="current"} > [[ .threshold ]]
+    params:
+      - name: threshold
+        summary: Total connection limit per instance
+        unit: ""
+        type: float
+        range: [0, 1000000]
+        value: 12000
+    for: 1m
+    severity: critical
+    labels:
+      alert_type: total_connection_limit
+    annotations:
+      summary: "{{ $labels.node_name }} exceeds [[ .threshold ]] total connections"
+      description: "MongoDB instance {{ $labels.node_name }} ({{ $labels.service_name }}) has exceeded [[ .threshold ]] total connections. Investigate immediately."

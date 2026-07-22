@@ -1,0 +1,35 @@
+# MongoDB per-client connection collector — oneshot service.
+#
+# Runs collect_client_connections.sh ONCE per activation: counts established
+# MongoDB sockets by client IP and atomically writes the .prom file that PMM's
+# node_exporter textfile collector scrapes.
+#
+# Triggered every 60s by mongodb-client-connections-collector.timer.
+
+[Unit]
+Description=MongoDB per-client connection collector: write mongodb_client_connections.prom
+After=network-online.target
+
+[Service]
+Type=oneshot
+
+# Single source of configurable values. The leading "-" makes a missing file
+# non-fatal (every value has a default in the script).
+EnvironmentFile=-/opt/mongodb-connection-monitor/config/collector.env
+
+# Adjust this path to match your install location.
+ExecStart=/opt/mongodb-connection-monitor/collector/collect_client_connections.sh
+
+# Run as an unprivileged user that owns the textfile-collector dir.
+User=node_exporter
+Group=node_exporter
+
+# Light hardening.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/usr/local/percona/pmm/collectors/textfile-collector
+
+[Install]
+WantedBy=multi-user.target
